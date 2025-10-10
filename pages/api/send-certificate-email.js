@@ -69,13 +69,11 @@ export default async function handler(req, res) {
         </head>
         <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
           <div style="max-width: 600px; margin: 0 auto; background: white;">
-            <!-- Header -->
             <div style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); padding: 30px; text-align: center;">
               <h1 style="color: white; margin: 0; font-size: 28px;">Your Certificates</h1>
               <p style="color: white; margin: 10px 0 0 0;">AMASI Certificate Portal</p>
             </div>
             
-            <!-- Content -->
             <div style="padding: 30px;">
               <p style="font-size: 16px; color: #333; margin-bottom: 20px;">
                 Hello,
@@ -84,7 +82,6 @@ export default async function handler(req, res) {
                 We found <strong>${data.length} certificate${data.length > 1 ? 's' : ''}</strong> associated with your email address. You can download ${data.length > 1 ? 'them' : 'it'} using the ${data.length > 1 ? 'links' : 'link'} below:
               </p>
               
-              <!-- Certificates Table -->
               <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
                 ${certificateList}
               </table>
@@ -96,7 +93,6 @@ export default async function handler(req, res) {
               </div>
             </div>
             
-            <!-- Footer -->
             <div style="background: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; color: #6b7280; font-size: 14px;">
                 This is an automated email from AMASI Certificate Portal.<br/>
