@@ -210,4 +210,31 @@ jane@example.com,Jane Smith,Tech Summit 2025,2025-11-20,Speaker,Conference,https
           {/* Upload Button */}
           <button
             onClick={handleUpload}
-            disabled={!file || uploa
+            disabled={!file || uploading}
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed font-medium text-lg"
+          >
+            {uploading ? (
+              <>
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-6 h-6" />
+                Upload Certificates
+              </>
+            )}
+          </button>
+
+          {/* Info Box */}
+          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <strong>Tip:</strong> Make sure your Google Drive links are set to "Anyone with the link can view" 
+              for certificates to be downloadable.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
