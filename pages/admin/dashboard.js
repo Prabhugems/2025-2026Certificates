@@ -15,6 +15,16 @@ export default function AdminDashboard() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCert, setEditingCert] = useState(null);
   const [stats, setStats] = useState({ total: 0, recent: 0 });
+  const [formData, setFormData] = useState({
+    email: '',
+    name: '',
+    event_name: '',
+    date_of_event: '',
+    category: '',
+    tags: '',
+    certificate_url: ''
+  });
+  const [saving, setSaving] = useState(false);
 
   // Check authentication
   useEffect(() => {
@@ -96,7 +106,83 @@ export default function AdminDashboard() {
 
   const handleEdit = (cert) => {
     setEditingCert(cert);
+    setFormData({
+      email: cert.email,
+      name: cert.name,
+      event_name: cert.event_name,
+      date_of_event: cert.date_of_event || '',
+      category: cert.category || '',
+      tags: cert.tags || '',
+      certificate_url: cert.certificate_url
+    });
     setShowEditModal(true);
+  };
+
+  const handleAddNew = () => {
+    setFormData({
+      email: '',
+      name: '',
+      event_name: '',
+      date_of_event: '',
+      category: '',
+      tags: '',
+      certificate_url: ''
+    });
+    setShowAddModal(true);
+  };
+
+  const handleSubmitAdd = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      const response = await fetch('/api/admin/add-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Certificate added successfully!');
+        setShowAddModal(false);
+        fetchCertificates();
+      } else {
+        alert(data.error || 'Failed to add certificate');
+      }
+    } catch (error) {
+      alert('Error adding certificate');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      const response = await fetch('/api/admin/update-certificate', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, id: editingCert.id }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Certificate updated successfully!');
+        setShowEditModal(false);
+        fetchCertificates();
+      } else {
+        alert(data.error || 'Failed to update certificate');
+      }
+    } catch (error) {
+      alert('Error updating certificate');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const downloadCSV = () => {
@@ -124,6 +210,141 @@ export default function AdminDashboard() {
     a.click();
   };
 
+  const CertificateForm = ({ onSubmit, onClose, title }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Event Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.event_name}
+              onChange={(e) => setFormData({...formData, event_name: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Date of Event
+            </label>
+            <input
+              type="text"
+              value={formData.date_of_event}
+              onChange={(e) => setFormData({...formData, date_of_event: e.target.value})}
+              placeholder="e.g., 2025-10-15 or October 15, 2025"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Category
+            </label>
+            <input
+              type="text"
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+              placeholder="e.g., Participant, Speaker, Volunteer"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tags
+            </label>
+            <input
+              type="text"
+              value={formData.tags}
+              onChange={(e) => setFormData({...formData, tags: e.target.value})}
+              placeholder="e.g., Workshop, Conference"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Certificate URL <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              value={formData.certificate_url}
+              onChange={(e) => setFormData({...formData, certificate_url: e.target.value})}
+              placeholder="https://drive.google.com/file/d/..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              required
+            />
+            <p className="mt-1 text-xs text-gray-500">Google Drive link or direct PDF URL</p>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
+            >
+              {saving ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Save Certificate
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -136,13 +357,22 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-600">Certificate Management Portal</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-          >
-            <LogOut className="w-5 h-5" />
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <a 
+              href="/" 
+              target="_blank"
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
+              View Portal →
+            </a>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+            >
+              <LogOut className="w-5 h-5" />
+              Logout
+            </button>
+          </div>
         </div>
       </div>
 
@@ -190,7 +420,7 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={handleAddNew}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               <Plus className="w-5 h-5" />
@@ -297,7 +527,22 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Add/Edit Modal will be added in next step */}
+      {/* Modals */}
+      {showAddModal && (
+        <CertificateForm
+          onSubmit={handleSubmitAdd}
+          onClose={() => setShowAddModal(false)}
+          title="Add New Certificate"
+        />
+      )}
+
+      {showEditModal && (
+        <CertificateForm
+          onSubmit={handleSubmitEdit}
+          onClose={() => setShowEditModal(false)}
+          title="Edit Certificate"
+        />
+      )}
     </div>
   );
 }
