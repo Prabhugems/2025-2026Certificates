@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Download, Calendar, Award, Tag } from 'lucide-react';
+import { Search, Download, Calendar, Award, Tag, Mail, CheckCircle } from 'lucide-react';
 
 export default function CertificatePortal() {
   const [email, setEmail] = useState('');
@@ -7,6 +7,8 @@ export default function CertificatePortal() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const handleSearch = async () => {
     if (!email.trim()) {
@@ -17,6 +19,7 @@ export default function CertificatePortal() {
     setLoading(true);
     setError('');
     setSearched(true);
+    setEmailSent(false);
 
     try {
       const response = await fetch('/api/certificates', {
@@ -38,6 +41,34 @@ export default function CertificatePortal() {
       setError('Unable to connect to server. Please try again later.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    setEmailSending(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/send-certificate-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmailSent(true);
+        setTimeout(() => setEmailSent(false), 5000);
+      } else {
+        setError(data.error || 'Failed to send email');
+      }
+    } catch (err) {
+      setError('Unable to send email. Please try again later.');
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -102,15 +133,42 @@ export default function CertificatePortal() {
               {error}
             </div>
           )}
+
+          {emailSent && (
+            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              Email sent successfully! Check your inbox.
+            </div>
+          )}
         </div>
 
         {searched && !loading && (
           <div>
             {certificates.length > 0 ? (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Found {certificates.length} certificate{certificates.length !== 1 ? 's' : ''}
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Found {certificates.length} certificate{certificates.length !== 1 ? 's' : ''}
+                  </h3>
+                  
+                  <button
+                    onClick={handleSendEmail}
+                    disabled={emailSending}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-2 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {emailSending ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4" />
+                        Email Me All Certificates
+                      </>
+                    )}
+                  </button>
+                </div>
                 
                 {certificates.map((cert, index) => (
                   <div
