@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { 
   Award, Plus, Upload, Download, Search, Edit, Trash2, 
-  LogOut, BarChart3, FileText, RefreshCw, X, Save 
+  LogOut, BarChart3, FileText, RefreshCw, X, Save, Calendar 
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -419,6 +419,14 @@ export default function AdminDashboard() {
         {/* Action Buttons */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => router.push('/admin/events')}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+              <Calendar className="w-5 h-5" />
+              Manage Events
+            </button>
+
             <button
               onClick={handleAddNew}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
