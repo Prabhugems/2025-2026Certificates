@@ -74,50 +74,43 @@ export default function NewTemplate() {
     setError('');
 
     try {
-      // First, upload the image to Supabase Storage
-      const formData = new FormData();
-      formData.append('file', templateFile);
-      formData.append('event_id', id);
-      formData.append('category', category);
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(templateFile);
+      
+      reader.onload = async () => {
+        const base64 = reader.result;
 
-      const uploadResponse = await fetch('/api/admin/templates/upload-image', {
-        method: 'POST',
-        body: formData,
-      });
+        // Upload to API
+        const response = await fetch('/api/admin/templates/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_id: id,
+            category,
+            file: base64,
+            filename: templateFile.name,
+            name_position_x: namePosition.x,
+            name_position_y: namePosition.y
+          }),
+        });
 
-      const uploadData = await uploadResponse.json();
+        const data = await response.json();
 
-      if (!uploadResponse.ok) {
-        throw new Error(uploadData.error || 'Failed to upload image');
-      }
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to upload template');
+        }
 
-      // Then save template info to database
-      const saveResponse = await fetch('/api/admin/templates/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          event_id: id,
-          category,
-          template_url: uploadData.url,
-          name_position_x: namePosition.x,
-          name_position_y: namePosition.y,
-          name_font_size: 48,
-          name_font_color: '#000000',
-          name_font_family: 'serif'
-        }),
-      });
+        alert('Template uploaded successfully!');
+        router.push(`/admin/events/${id}`);
+      };
 
-      const saveData = await saveResponse.json();
+      reader.onerror = () => {
+        throw new Error('Failed to read file');
+      };
 
-      if (!saveResponse.ok) {
-        throw new Error(saveData.error || 'Failed to save template');
-      }
-
-      alert('Template uploaded successfully!');
-      router.push(`/admin/events/${id}`);
     } catch (err) {
       setError(err.message || 'Error uploading template');
-    } finally {
       setUploading(false);
     }
   };
