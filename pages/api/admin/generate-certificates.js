@@ -24,7 +24,10 @@ export default async function handler(req, res) {
       .eq('id', event_id)
       .single()
 
-    if (eventError) throw eventError
+    if (eventError) {
+      console.error('Event error:', eventError)
+      throw new Error('Event not found')
+    }
 
     // Get all templates for this event
     const { data: templates, error: templatesError } = await supabase
@@ -32,7 +35,10 @@ export default async function handler(req, res) {
       .select('*')
       .eq('event_id', event_id)
 
-    if (templatesError) throw templatesError
+    if (templatesError) {
+      console.error('Templates error:', templatesError)
+      throw templatesError
+    }
 
     if (!templates || templates.length === 0) {
       return res.status(400).json({ error: 'No templates found for this event' })
@@ -64,38 +70,43 @@ export default async function handler(req, res) {
         
         if (!template) {
           failed++
-          errors.push(`No template found for category: ${category}`)
+          errors.push(`No template found for category: ${category} (Available: ${Object.keys(templateMap).join(', ')})`)
           continue
         }
 
-        // Generate certificate URL (for now, we'll use the template URL as placeholder)
-        // In a real implementation, you would generate a personalized PDF here
+        // Generate certificate URL (using template as placeholder for now)
         const certificateUrl = template.template_url
 
-        // Check if certificate already exists
+        // Check if certificate already exists for this email + event
         const { data: existing } = await supabase
           .from('certificates')
           .select('id')
           .eq('email', email.toLowerCase().trim())
           .eq('event_id', event_id)
-          .single()
+          .maybeSingle()
 
         if (existing) {
           // Update existing
-          await supabase
+          const { error: updateError } = await supabase
             .from('certificates')
             .update({
               name: name.trim(),
               event_name: event.event_name,
               date_of_event: event.event_date,
               category: category.trim(),
-              certificate_url: certificateUrl,
-              event_id: event_id
+              certificate_url: certificateUrl
             })
             .eq('id', existing.id)
+
+          if (updateError) {
+            console.error('Update error:', updateError)
+            failed++
+            errors.push(`Failed to update ${email}: ${updateError.message}`)
+            continue
+          }
         } else {
-          // Insert new
-          await supabase
+          // Insert new - IMPORTANT: event_id must be an INTEGER
+          const { error: insertError } = await supabase
             .from('certificates')
             .insert([{
               email: email.toLowerCase().trim(),
@@ -104,12 +115,20 @@ export default async function handler(req, res) {
               date_of_event: event.event_date,
               category: category.trim(),
               certificate_url: certificateUrl,
-              event_id: event_id
+              event_id: parseInt(event_id) // Make sure it's an integer!
             }])
+
+          if (insertError) {
+            console.error('Insert error:', insertError)
+            failed++
+            errors.push(`Failed to insert ${email}: ${insertError.message}`)
+            continue
+          }
         }
 
         generated++
       } catch (err) {
+        console.error('Processing error:', err)
         failed++
         errors.push(`Error processing ${participant.email}: ${err.message}`)
       }
@@ -125,6 +144,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error generating certificates:', error)
-    res.status(500).json({ error: 'Failed to generate certificates' })
+    res.status(500).json({ 
+      error: 'Failed to generate certificates',
+      details: error.message 
+    })
   }
 }
