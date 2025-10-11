@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { 
-  Calendar, MapPin, ArrowLeft, Plus, Edit, Trash2, 
-  Upload, FileText, Image, Award 
+import {
+  Calendar, MapPin, ArrowLeft, Plus, Edit, Trash2,
+  Upload, FileText, Image, Award, FileCheck
 } from 'lucide-react';
 
 export default function EventDetails() {
@@ -23,7 +23,6 @@ export default function EventDetails() {
     try {
       const response = await fetch(`/api/admin/events/get?id=${id}`);
       const data = await response.json();
-      
       if (response.ok) {
         setEvent(data.event);
       }
@@ -37,7 +36,6 @@ export default function EventDetails() {
     try {
       const response = await fetch(`/api/admin/templates/list?event_id=${id}`);
       const data = await response.json();
-      
       if (response.ok) {
         setTemplates(data.templates || []);
       }
@@ -215,22 +213,45 @@ export default function EventDetails() {
 
         {/* Generate Certificates Section */}
         {templates.length > 0 && (
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl shadow-sm p-6 border border-green-200">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-2">Ready to Generate Certificates?</h2>
-                <p className="text-gray-600 mb-4">
-                  You have {templates.length} template{templates.length !== 1 ? 's' : ''} ready. 
-                  Upload a CSV file to generate certificates for all participants.
-                </p>
+          <div className="space-y-4">
+            {/* Generate Database Records */}
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl shadow-sm p-6 border border-green-200">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800 mb-2">Step 1: Generate Certificate Records</h2>
+                  <p className="text-gray-600 mb-4">
+                    You have {templates.length} template{templates.length !== 1 ? 's' : ''} ready.
+                    Upload a CSV file to create certificate records for all participants.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push(`/admin/events/${id}/generate`)}
+                  className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition whitespace-nowrap"
+                >
+                  <Upload className="w-5 h-5" />
+                  Upload CSV
+                </button>
               </div>
-              <button
-                onClick={() => router.push(`/admin/events/${id}/generate`)}
-                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition whitespace-nowrap"
-              >
-                <Upload className="w-5 h-5" />
-                Generate Certificates
-              </button>
+            </div>
+
+            {/* Generate PDFs */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl shadow-sm p-6 border border-purple-200">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800 mb-2">Step 2: Generate Personalized PDFs</h2>
+                  <p className="text-gray-600 mb-4">
+                    Create PDF certificates with participant names overlaid on templates.
+                    This will generate personalized certificates for all participants.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push(`/admin/events/${id}/generate-pdfs`)}
+                  className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition whitespace-nowrap"
+                >
+                  <FileCheck className="w-5 h-5" />
+                  Generate PDFs
+                </button>
+              </div>
             </div>
           </div>
         )}
