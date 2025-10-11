@@ -155,7 +155,7 @@ export default function EventsList() {
                 </div>
 
                 <button
-                  onClick={() => router.push(`/admin/events/event?id=${event.id}`)}
+                  onClick={() => router.push(`/admin/events/event-details?id=${event.id}`)}
                   className="w-full py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
                 >
                   Manage Event
