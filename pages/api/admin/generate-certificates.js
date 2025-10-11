@@ -1,152 +1,232 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
+import { createCanvas, loadImage } from 'canvas';
+import PDFDocument from 'pdfkit';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
+);
+
+// Helper function to generate PDF for a single certificate
+async function generatePDF(name, template, eventId, category) {
+  try {
+    // Download template image
+    const templateResponse = await fetch(template.template_url);
+    if (!templateResponse.ok) {
+      throw new Error('Failed to download template');
+    }
+
+    const templateBuffer = await templateResponse.arrayBuffer();
+    const image = await loadImage(Buffer.from(templateBuffer));
+
+    // Create canvas
+    const canvas = createCanvas(image.width, image.height);
+    const ctx = canvas.getContext('2d');
+
+    // Draw template
+    ctx.drawImage(image, 0, 0);
+
+    // Configure text
+    const fontSize = template.name_font_size || 48;
+    const fontColor = template.name_font_color || '#000000';
+    const fontFamily = template.name_font_family || 'Arial';
+    
+    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = fontColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Draw name
+    const nameX = template.name_position_x || image.width / 2;
+    const nameY = template.name_position_y || image.height / 2;
+    ctx.fillText(name, nameX, nameY);
+
+    // Convert to PNG
+    const pngBuffer = canvas.toBuffer('image/png');
+
+    // Create PDF
+    const pdfDoc = new PDFDocument({
+      size: [image.width, image.height],
+      margins: { top: 0, bottom: 0, left: 0, right: 0 }
+    });
+
+    const chunks = [];
+    pdfDoc.on('data', chunk => chunks.push(chunk));
+    
+    const pdfPromise = new Promise((resolve, reject) => {
+      pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+      pdfDoc.on('error', reject);
+    });
+
+    pdfDoc.image(pngBuffer, 0, 0, {
+      width: image.width,
+      height: image.height
+    });
+
+    pdfDoc.end();
+
+    const pdfBuffer = await pdfPromise;
+
+    // Upload to Supabase Storage
+    const fileName = `certificates/${eventId}/${category}_${name.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('certificates')
+      .upload(fileName, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('certificates')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+
+  } catch (error) {
+    console.error('PDF generation error for', name, ':', error);
+    throw error;
+  }
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  const { event_id, participants } = req.body
-
-  if (!event_id || !participants || !Array.isArray(participants)) {
-    return res.status(400).json({ error: 'Invalid request data' })
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Get event details
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', event_id)
-      .single()
+    const { event_id, participants } = req.body;
 
-    if (eventError) {
-      console.error('Event error:', eventError)
-      throw new Error('Event not found')
+    if (!event_id || !participants || !Array.isArray(participants)) {
+      return res.status(400).json({ 
+        error: 'Invalid request. event_id and participants array required' 
+      });
     }
 
     // Get all templates for this event
     const { data: templates, error: templatesError } = await supabase
       .from('certificate_templates')
       .select('*')
-      .eq('event_id', event_id)
+      .eq('event_id', event_id);
 
     if (templatesError) {
-      console.error('Templates error:', templatesError)
-      throw templatesError
+      return res.status(500).json({ error: 'Failed to fetch templates' });
     }
 
     if (!templates || templates.length === 0) {
-      return res.status(400).json({ error: 'No templates found for this event' })
+      return res.status(400).json({ 
+        error: 'No templates found for this event. Please upload templates first.' 
+      });
     }
 
-    // Create a map of category to template
-    const templateMap = {}
-    templates.forEach(template => {
-      templateMap[template.category.toLowerCase()] = template
-    })
+    // Get event details
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', event_id)
+      .single();
 
-    let generated = 0
-    let failed = 0
-    const errors = []
+    if (eventError || !event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const results = {
+      success: [],
+      failed: []
+    };
 
     // Process each participant
     for (const participant of participants) {
       try {
-        const { email, name, category } = participant
+        const { email, name, category } = participant;
 
         if (!email || !name || !category) {
-          failed++
-          errors.push(`Missing required fields for ${email || name || 'unknown'}`)
-          continue
+          results.failed.push({
+            participant,
+            error: 'Missing required fields'
+          });
+          continue;
         }
 
         // Find matching template
-        const template = templateMap[category.toLowerCase()]
+        const template = templates.find(
+          t => t.category.toLowerCase() === category.toLowerCase()
+        );
+
         if (!template) {
-          failed++
-          errors.push(`No template found for category: ${category} (Available: ${Object.keys(templateMap).join(', ')})`)
-          continue
+          results.failed.push({
+            participant,
+            error: `No template found for category: ${category}`
+          });
+          continue;
         }
 
-        // Generate certificate URL (using template as placeholder for now)
-        // PDFs will be generated later via the generate-pdfs page
-        const certificateUrl = template.template_url
+        // Generate PDF
+        const pdfUrl = await generatePDF(name, template, event_id, category);
 
-        // Check if certificate already exists for this email + event
-        const { data: existing } = await supabase
+        // Insert certificate record
+        const { data: cert, error: insertError } = await supabase
           .from('certificates')
-          .select('id')
-          .eq('email', email.toLowerCase().trim())
-          .eq('event_id', parseInt(event_id))
-          .maybeSingle()
+          .insert({
+            email: email.toLowerCase().trim(),
+            name: name.trim(),
+            event_name: event.event_name,
+            date_of_event: event.event_date,
+            category: category.trim(),
+            certificate_url: pdfUrl,
+            event_id: parseInt(event_id),
+            tags: null
+          })
+          .select()
+          .single();
 
-        if (existing) {
-          // Update existing
-          const { error: updateError } = await supabase
-            .from('certificates')
-            .update({
-              name: name.trim(),
-              event_name: event.event_name,
-              date_of_event: event.event_date,
-              category: category.trim(),
-              certificate_url: certificateUrl,
-              event_id: parseInt(event_id)
-            })
-            .eq('id', existing.id)
-
-          if (updateError) {
-            console.error('Update error:', updateError)
-            failed++
-            errors.push(`Failed to update ${email}: ${updateError.message}`)
-            continue
-          }
+        if (insertError) {
+          results.failed.push({
+            participant,
+            error: insertError.message
+          });
         } else {
-          // Insert new - CRITICAL FIX: parseInt(event_id)
-          const { error: insertError } = await supabase
-            .from('certificates')
-            .insert([{
-              email: email.toLowerCase().trim(),
-              name: name.trim(),
-              event_name: event.event_name,
-              date_of_event: event.event_date,
-              category: category.trim(),
-              certificate_url: certificateUrl,
-              event_id: parseInt(event_id)
-            }])
-
-          if (insertError) {
-            console.error('Insert error:', insertError)
-            failed++
-            errors.push(`Failed to insert ${email}: ${insertError.message}`)
-            continue
-          }
+          results.success.push({
+            participant,
+            certificateId: cert.id,
+            pdfUrl
+          });
         }
 
-        generated++
-      } catch (err) {
-        console.error('Processing error:', err)
-        failed++
-        errors.push(`Error processing ${participant.email}: ${err.message}`)
+      } catch (error) {
+        results.failed.push({
+          participant,
+          error: error.message
+        });
       }
     }
 
-    res.status(200).json({
-      success: true,
-      generated,
-      failed,
-      errors: errors.slice(0, 10),
-      message: `Generated ${generated} certificates. ${failed} failed.`
-    })
+    return res.status(200).json({
+      message: 'Certificate generation completed',
+      total: participants.length,
+      successful: results.success.length,
+      failed: results.failed.length,
+      results
+    });
+
   } catch (error) {
-    console.error('Error generating certificates:', error)
-    res.status(500).json({
+    console.error('Certificate generation error:', error);
+    return res.status(500).json({ 
       error: 'Failed to generate certificates',
-      details: error.message
-    })
+      details: error.message 
+    });
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
