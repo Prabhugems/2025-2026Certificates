@@ -67,7 +67,6 @@ export default async function handler(req, res) {
 
         // Find matching template
         const template = templateMap[category.toLowerCase()]
-        
         if (!template) {
           failed++
           errors.push(`No template found for category: ${category} (Available: ${Object.keys(templateMap).join(', ')})`)
@@ -82,7 +81,7 @@ export default async function handler(req, res) {
           .from('certificates')
           .select('id')
           .eq('email', email.toLowerCase().trim())
-          .eq('event_id', event_id)
+          .eq('event_id', parseInt(event_id))
           .maybeSingle()
 
         if (existing) {
@@ -94,7 +93,8 @@ export default async function handler(req, res) {
               event_name: event.event_name,
               date_of_event: event.event_date,
               category: category.trim(),
-              certificate_url: certificateUrl
+              certificate_url: certificateUrl,
+              event_id: parseInt(event_id)
             })
             .eq('id', existing.id)
 
@@ -105,7 +105,7 @@ export default async function handler(req, res) {
             continue
           }
         } else {
-          // Insert new - IMPORTANT: event_id must be an INTEGER
+          // Insert new - CRITICAL FIX: parseInt(event_id)
           const { error: insertError } = await supabase
             .from('certificates')
             .insert([{
@@ -115,7 +115,7 @@ export default async function handler(req, res) {
               date_of_event: event.event_date,
               category: category.trim(),
               certificate_url: certificateUrl,
-              event_id: parseInt(event_id) // Make sure it's an integer!
+              event_id: parseInt(event_id)
             }])
 
           if (insertError) {
@@ -138,15 +138,14 @@ export default async function handler(req, res) {
       success: true,
       generated,
       failed,
-      errors: errors.slice(0, 10), // Limit errors to first 10
+      errors: errors.slice(0, 10),
       message: `Generated ${generated} certificates. ${failed} failed.`
     })
-
   } catch (error) {
     console.error('Error generating certificates:', error)
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to generate certificates',
-      details: error.message 
+      details: error.message
     })
   }
 }
