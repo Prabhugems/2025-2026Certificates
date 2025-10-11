@@ -1,3 +1,4 @@
+// Event Details Page
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Plus, Upload, Calendar, MapPin, Award, AlertCircle, Image } from 'lucide-react';
