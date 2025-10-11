@@ -17,6 +17,6 @@
     "autoprefixer": "10.4.16",
     "postcss": "8.4.31",
     "nodemailer": "6.9.7",
-    "jspdf": "2.5.1"
+
   }
 }
