@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+// Events List Page - Updatedimport React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Calendar, MapPin, FileText, Plus, Edit, Trash2, ArrowLeft, Award } from 'lucide-react';
 
