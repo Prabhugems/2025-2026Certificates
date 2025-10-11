@@ -17,6 +17,8 @@
     "autoprefixer": "10.4.16",
     "postcss": "8.4.31",
     "nodemailer": "6.9.7",
-    "jspdf": "2.5.1"
+    "canvas": "^2.11.2",
+    "pdfkit": "^0.14.0",
+    "sharp": "^0.33.0"
   }
 }
