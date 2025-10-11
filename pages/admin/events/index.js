@@ -55,7 +55,6 @@ export default function EventsList() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -117,7 +116,7 @@ export default function EventsList() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => router.push(`/admin/events/event-details?id=${event.id}`)}
+                      onClick={() => router.push(`/admin/event-details?id=${event.id}`)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
                       title="Manage"
                     >
@@ -155,7 +154,7 @@ export default function EventsList() {
                 </div>
 
                 <button
-                  onClick={() => router.push(`/admin/events/event-details?id=${event.id}`)}
+                  onClick={() => router.push(`/admin/event-details?id=${event.id}`)}
                   className="w-full py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
                 >
                   Manage Event
