@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import {
   Calendar, MapPin, ArrowLeft, Plus, Edit, Trash2,
-  Upload, FileText, Image, Award, FileCheck
+  Upload, FileText, Image, Award, FileCheck, AlertCircle
 } from 'lucide-react';
 
 export default function EventDetails() {
@@ -11,28 +11,45 @@ export default function EventDetails() {
   const [event, setEvent] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    // Check authentication
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      router.push('/admin/login');
+      return;
+    }
+
     if (id) {
       fetchEventDetails();
       fetchTemplates();
     }
-  }, [id]);
+  }, [id, router]);
 
   const fetchEventDetails = async () => {
     try {
+      console.log('Fetching event:', id); // Debug log
       const response = await fetch(`/api/admin/events/get?id=${id}`);
       const data = await response.json();
+      
+      console.log('Response:', data); // Debug log
+      
       if (response.ok) {
         setEvent(data.event);
+        setError('');
+      } else {
+        setError(data.error || 'Failed to load event');
       }
     } catch (error) {
       console.error('Error fetching event:', error);
+      setError('Failed to load event');
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchTemplates = async () => {
-    setLoading(true);
     try {
       const response = await fetch(`/api/admin/templates/list?event_id=${id}`);
       const data = await response.json();
@@ -41,8 +58,6 @@ export default function EventDetails() {
       }
     } catch (error) {
       console.error('Error fetching templates:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -67,12 +82,45 @@ export default function EventDetails() {
     }
   };
 
-  if (!event) {
+  // Loading state
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading event...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !event) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Error Loading Event</h2>
+          <p className="text-red-600 mb-4">{error || 'Event not found'}</p>
+          <p className="text-sm text-gray-600 mb-4">Event ID: {id}</p>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                setLoading(true);
+                setError('');
+                fetchEventDetails();
+              }}
+              className="block w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => router.push('/admin/events')}
+              className="block w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Back to Events List
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -113,13 +161,6 @@ export default function EventDetails() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => router.push(`/admin/events/${id}/edit`)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Event
-            </button>
           </div>
         </div>
       </div>
@@ -141,12 +182,7 @@ export default function EventDetails() {
             </button>
           </div>
 
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading templates...</p>
-            </div>
-          ) : templates.length === 0 ? (
+          {templates.length === 0 ? (
             <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
               <Image className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-800 mb-2">No Templates Yet</h3>
@@ -166,7 +202,6 @@ export default function EventDetails() {
                   key={template.id}
                   className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition"
                 >
-                  {/* Template Preview */}
                   <div className="aspect-[4/3] bg-gray-100 relative">
                     {template.template_url ? (
                       <img
@@ -181,81 +216,7 @@ export default function EventDetails() {
                     )}
                   </div>
 
-                  {/* Template Info */}
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-800 mb-2">{template.category}</h3>
                     <div className="text-sm text-gray-600 mb-4">
                       Template uploaded
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => router.push(`/admin/events/${id}/templates/${template.id}/edit`)}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition text-sm"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteTemplate(template.id)}
-                        className="px-3 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50 transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Generate Certificates Section */}
-        {templates.length > 0 && (
-          <div className="space-y-4">
-            {/* Generate Database Records */}
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl shadow-sm p-6 border border-green-200">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-2">Step 1: Generate Certificate Records</h2>
-                  <p className="text-gray-600 mb-4">
-                    You have {templates.length} template{templates.length !== 1 ? 's' : ''} ready.
-                    Upload a CSV file to create certificate records for all participants.
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push(`/admin/events/${id}/generate`)}
-                  className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition whitespace-nowrap"
-                >
-                  <Upload className="w-5 h-5" />
-                  Upload CSV
-                </button>
-              </div>
-            </div>
-
-            {/* Generate PDFs */}
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl shadow-sm p-6 border border-purple-200">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800 mb-2">Step 2: Generate Personalized PDFs</h2>
-                  <p className="text-gray-600 mb-4">
-                    Create PDF certificates with participant names overlaid on templates.
-                    This will generate personalized certificates for all participants.
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push(`/admin/events/${id}/generate-pdfs`)}
-                  className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition whitespace-nowrap"
-                >
-                  <FileCheck className="w-5 h-5" />
-                  Generate PDFs
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
