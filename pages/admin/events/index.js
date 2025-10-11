@@ -117,7 +117,7 @@ export default function EventsList() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => router.push(`/admin/events/event?id=${event.id}`)}
+                      onClick={() => router.push(`/admin/events/event-details?id=${event.id}`)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
                       title="Manage"
                     >
