@@ -74,6 +74,7 @@ export default async function handler(req, res) {
         }
 
         // Generate certificate URL (using template as placeholder for now)
+        // PDFs will be generated later via the generate-pdfs page
         const certificateUrl = template.template_url
 
         // Check if certificate already exists for this email + event
