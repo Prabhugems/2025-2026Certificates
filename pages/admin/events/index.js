@@ -1,4 +1,4 @@
-// Events List Page - Updatedimport React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Calendar, MapPin, FileText, Plus, Edit, Trash2, ArrowLeft, Award } from 'lucide-react';
 
@@ -117,7 +117,7 @@ export default function EventsList() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => router.push(`/admin/events/${event.id}`)}
+                      onClick={() => router.push(`/admin/events/event?id=${event.id}`)}
                       className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
                       title="Manage"
                     >
@@ -155,7 +155,7 @@ export default function EventsList() {
                 </div>
 
                 <button
-                  onClick={() => router.push(`/admin/events/${event.id}`)}
+                  onClick={() => router.push(`/admin/events/event?id=${event.id}`)}
                   className="w-full py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
                 >
                   Manage Event
